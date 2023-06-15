@@ -2557,13 +2557,598 @@ Tak perlu khawatir, di JavaScript, kita bisa melakukan validasi data tersebut de
 
 ==========================================================================================================================
 
-==========================================================================================================================
+Data Validation Menggunakan Joi
+
+20210512111407089dca6dbbef7481401418b4756c607d.jpegJoi merupakan tools yang populer dan andal untuk melakukan validasi data di JavaScript [2]. Joi dibuat oleh Sideway yang merupakan pengembang dari Hapi framework. Meskipun pengembangnya sama, Joi bukanlah bagian dari lingkungan framework Hapi. Ia menjadi tools terpisah dan dapat digunakan tanpa terikat pada satu framework saja.
+
+Dalam memvalidasi data, Joi menggunakan pola schema description. Sehingga untuk memvalidasi data menggunakan Joi, kita perlu mendeskripsikan terlebih dahulu skema data yang diinginkan.
+
+Untuk membuat schema pada Joi, gunakan method Joi.object(). Di dalamnya (pada parameter method), kita bisa mulai menuliskan schema dari objek yang ingin divalidasi.
+
+    // membuat objek schema
+    const schema = Joi.object({
+     username: Joi.string().alphanum().min(3).max(30).required(),
+     password: Joi.string().min(6).required(),
+     repeatPassword: Joi.string().required().valid(Joi.ref("password")),
+     email: Joi.string().email().required(),
+    });
+
+    Anda bisa mempraktikkan kode melalui platform replit.com di halaman berikut.
+
+Value dari tiap properti objek schema diisi dengan method-method dari Joi. Method ini mendeskripsikan spesifikasi nilai yang harus dipenuhi untuk lolos proses validasi.
+
+Berikut beberapa method Joi yang biasa digunakan:
+
+    string() : Digunakan untuk menetapkan string sebagai tipe data pada properti.
+    number() : Digunakan untuk menetapkan number sebagai tipe data.
+    required() : Digunakan untuk menandakan bahwa properti objek wajib ditetapkan. Biasanya, method ini digunakan secara berantai, contohnya Joi.string().required() yang artinya properti wajib ditetapkan dan bertipe data string.
+    array() : Digunakan untuk menetapkan properti haruslah sebuah array. Kita juga bisa lebih detail seperti menspesifikasikan hingga ke itemnya. Bila Anda ingin properti sebagai array dari string, maka tuliskan Joi.array().items(Joi.string()).
+    email() : Merupakan method yang dapat memvalidasi bahwa nilai string adalah sebuah email. Umumnya, penggunaan method ini tampak seperti Joi.string().email().
+
+Method pada Joi sangatlah beragam. Jangan pusing untuk mempelajari semuanya sekarang. Pelajarilah method-method lain ketika Anda sudah membutuhkannya. Anda bisa mencari referensi lengkapnya dari dokumentasi yang disediakan Joi.
+
+Lalu, bagaimana cara melakukan validasinya? Mudah saja! Anda bisa gunakan fungsi validate() dari objek schema yang sudah dibuat, lalu berikan nilai atau objek yang hendak Anda validasi sesuai dengan schema yang telah ditetapkan.
+
+    // membuat objek schema
+    const schema = Joi.object({
+     username: Joi.string().alphanum().min(3).max(30).required(),
+     password: Joi.string().min(6).required(),
+     repeatPassword: Joi.string().required().valid(Joi.ref("password")),
+     email: Joi.string().email().required(),
+    });
+    // memvalidasi objek berdasarkan schema
+    const validationResult = schema.validate({
+     username: 'harryp',
+     password: 'supersecretpassword',
+     repeatPassword: 'supersecretpassword',
+     email: 'harry@potter.com'
+    });
+
+Fungsi validate mengembalikan objek yang merupakan hasil dari validasi tersebut (validationResult). Dari validationResult, kita bisa mengetahui apakah objek yang diperiksa itu valid atau tidak.
+
+    // membuat objek schema
+    const schema = Joi.object({
+     username: Joi.string().alphanum().min(3).max(30).required(),
+     password: Joi.string().min(6).required(),
+     repeatPassword: Joi.string().required().valid(Joi.ref("password")),
+     email: Joi.string().email().required(),
+    });
+
+    // memvalidasi objek berdasarkan schema
+    const validationResult = schema.validate({
+     username: 'harryp',
+     password: 'supersecretpassword',
+     repeatPassword: 'supersecretpassword',
+     email: 'harry@potter.com'
+    });
+
+    // menelaah hasil dari proses validasi
+    if(validationResult.error) {
+     console.log(`Validation error: ${validationResult.error.message}`);
+    } else {
+     console.log('Validasi berhasil')
+    }
+
+Bila validationResult.error tidak benilai undefined, itu berarti validasi gagal. Bahkan kita bisa melihat alasan mengapa validasi itu gagal melalui properti validationResult.error.message.
 
 ==========================================================================================================================
 
-==========================================================================================================================
+Menerapkan Data Validation pada Notes API
+
+Kita sudah mengetahui cara melakukan validasi data menggunakan Joi. Mulai dari membuat objek schema, melakukan proses validasi berdasarkan schema, hingga mengevaluasi hasil validasinya.
+
+Ketahuilah bahwa Notes API yang kita buat belum menerapkan data validation. Sehingga Notes API sangat rawan menerima data yang tidak sesuai dan dapat mengganggu fungsionalitas dari sistem ke depannya.
+
+Nah, agar hal tersebut tidak terjadi lagi, pada latihan kali ini kita akan mencoba menerapkan proses validasi data dengan bantuan Joi.
 
 ==========================================================================================================================
+
+Menerapkan Data Validation pada Notes API - Menyiapkan Skenario Pengujian
+
+Di latihan kali ini, kita akan mencoba menerapkan pendekatan yang sedikit berbeda, yakni menggunakan pengujian Postman sebagai patokan keberhasilan dalam menerapkan proses validasi data.
+
+Untuk itu, sebelum menuliskan kode aplikasi, tentu kita perlu menyiapkan terlebih dahulu kebutuhan pengujian di Postman. Kira-kira apa saja ya yang perlu kita uji untuk menerapkan validasi data?
+
+Oke, mari kita telaah dulu keadaan dari aplikasi Notes API sekarang. Saat ini terdapat dua jalur di mana pengguna dapat mengirimkan data (objek note), yakni melalui POST /notes dan PUT /notes. Sehingga, kita perlu memastikan data yang dikirimkan pada kedua jalur tersebut merupakan objek note yang valid.
+
+Untuk mengetahui valid dan tidaknya objek note yang dikirimkan pengguna, kita perlu tahu dulu spesifikasi dari objek notes tersebut. Oke, berikut adalah ketentuan dari objek note yang dapat diterima oleh Notes API:
+
+    Wajib memiliki properti title dengan tipe string dan tidak boleh kosong.
+    Wajib memiliki properti body dengan tipe string dan tidak boleh kosong.
+    Wajib memiliki properti tags yang merupakan array dari string.
+
+Cukup jelas? Lanjut!
+
+Sekarang, mari kita coba buat skenario pengujian baru untuk route POST /notes dan PUT /notes. Berikut ketentuan skenarionya:
+
+    Skenario 1 : Adding Notes with Bad Note Payload (Memasukkan catatan baru dengan data yang buruk).
+    Skenario 2 : Update Note with Bad Note Payload (Mengubah catatan dengan data yang buruk).
+
+Untuk masing-masing skenario perlu menjalankan spesifikasi testing berikut:
+
+    Pastikan response memiliki status code 400 (bad request).
+    Pastikan header response Content-Type memiliki nilai application/json; charset=utf-8.
+    Pastikan body response adalah object.
+    Pastikan body response memiliki properti dan nilai yang sesuai.
+
+Yuk kita langsung buka saja aplikasi Postman dan buat 2 (dua) request baru sesuai skenario di dalam Notes API Test collection.
+
+20210512113106b3ca3ad837a0d18e240aabd3170d59c3.jpeg
+
+Untuk Adding Notes with Bad Note Payload, isikan request URL dengan method POST dan http://localhost:5000/notes.
+
+20210512113105c59270086b341bc37e6cce9703b95aaf.jpeg
+
+Untuk Update Note with Bad Note Payload, isikan request URL dengan method PUT dan http://localhost:5000/notes/{{noteId}}.
+
+2021051211310688fc35f286edc06c93a38c7e69a478f3.jpeg
+
+Sebelum menuliskan berkas testing, ada hal yang perlu Anda ketahui terlebih dahulu. Untuk body payload pada masing-masing skenario uji, kita akan gunakan data secara dinamis. Itu artinya, kita tidak akan menulis data JSON secara manual di body request, melainkan kita akan memanfaatkan semacam “dataset” yang disimpan pada variable environments.
+
+Dengan pendekatan ini, kita bisa membuat pengujian pada satu Postman request yang dipanggil berulang kali dengan data body yang berbeda-beda. Tujuannya adalah untuk mencakup seluruh kemungkinan error yang dapat dilakukan oleh pengguna.
+
+Mungkin terdengar membingungkan ya? Tak apa, jika masih bingung sementara ikuti saja instruksinya ya.
+
+Silakan buka tabs Environments dan buat dua variabel environments baru bernama badNotePayloads dan currentBadNotePayload. Biarkan initial value dan current value-nya tetap kosong.
+
+202105121131064a9f81bc0423b1d5e762ce222c1662f8.jpeg
+
+Simpan perubahan pada Environment dengan menekan Save.
+
+Kembali ke request Adding Notes with Bad Note Payload. Silakan buka tab Pre-request Script.
+
+20210512113106549b88a38da8da0ffb68df2fc99d6a2a.jpeg
+
+Di bagian ini, silakan tuliskan kode JavaScript pre-request berikut:
+
+    let badNotePayloads = pm.environment.get('badNotePayloads');  // ini akan bertipe Array
+
+    if (!badNotePayloads || badNotePayloads.length === 0) {
+        // inisialisasi dengan sejumlah note yang tidak sesuai
+        badNotePayloads = [
+            { tags: ["Android", "Web"], body: "Isi dari catatan A" },
+            { title: 1, tags: ["Android", "Web"], body: "Isi dari catatan A" },
+            { title: "Catatan A", body: "Isi dari catatan A" },
+            { title: "Catatan A", tags: [1, "2"], body: "Isi dari catatan A" },
+            { title: "Catatan A", tags: ["Android", "Web"] },
+            { title: "Catatan A", tags: ["Android", "Web"], body: true }
+        ]
+    }
+
+    const currentBadNotePayload = badNotePayloads.shift();  // hapus index 0, geser sisanya
+    pm.environment.set('currentBadNotePayload', JSON.stringify(currentBadNotePayload));
+    pm.environment.set('badNotePayloads', badNotePayloads);
+
+Ketahuilah bahwa kode JavaScript pada pre-request akan tereksekusi setiap kali request akan dijalankan. Nah, pre-request ini kita manfaatkan untuk menginisialisasi objek note yang hendak digunakan pada request.
+
+Pada kode di atas, Anda juga bisa melihat kumpulan objek-objek (dataset) dari note yang dianggap tidak benar atau menimbulkan error. Ketika request dijalankan berulang-ulang, ia akan membawa objek note dari dataset secara satu per satu (bergeser karena pemanggilan fungsi shift) melalui variabel currentBadNotePayload.
+
+Lanjut, silakan buka tabs Body dan gunakan raw -> JSON sebagai tipe data body. Kemudian, berikan nilai {{currentBadNotePayload}} pada data body-nya.
+
+202105121131060d16c9581fb3492f81ececa8d7e1d0b9.jpeg
+
+Dengan begitu, request ini akan membawa data yang ada di dalam variabel currentBadNotePayload setiap kali dijalankan.
+
+Sampai di sini, semoga Anda sudah paham ya maksudnya.
+
+Oke, sekarang kita bisa mulai menulis kode testing pada Adding Notes with Bad Payload. Silakan buka tab Tests, kemudian tuliskan kode testing sesuai spesifikasi testing berikut:
+
+    pm.test('response status code should have 400 value', () => {
+        pm.response.to.have.status(400);
+    });
+
+    pm.test('response Content-Type header should have application/json; charset=utf-8 value', () => {
+      pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');
+    });
+
+    pm.test('response body should be an object', () => {
+        const responseJson = pm.response.json();
+        pm.expect(responseJson).to.be.an('object');
+    });
+
+    pm.test('response body object should have correct property and value', () => {
+        const responseJson = pm.response.json();
+        pm.expect(responseJson).to.haveOwnProperty('status');
+        pm.expect(responseJson.status).to.equals('fail');
+        pm.expect(responseJson).to.haveOwnProperty('message');
+        pm.expect(responseJson.message).to.be.ok;
+    })
+
+Jangan dulu beranjak, di akhir kode testing, silakan tambahkan kode yang diberi tanda tebal berikut ini ya.
+
+    pm.test('response status code should have 400 value', () => {
+        pm.response.to.have.status(400);
+    });
+
+    pm.test('response Content-Type header should have application/json; charset=utf-8 value', () => {
+      pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');
+    });
+
+    pm.test('response body should be an object', () => {
+        const responseJson = pm.response.json();
+        pm.expect(responseJson).to.be.an('object');
+    });
+
+    pm.test('response body object should have correct property and value', () => {
+        const responseJson = pm.response.json();
+        pm.expect(responseJson).to.haveOwnProperty('status');
+        pm.expect(responseJson.status).to.equals('fail');
+        pm.expect(responseJson).to.haveOwnProperty('message');
+        pm.expect(responseJson.message).to.be.ok;
+    });
+
+    const repeatRequestUntilDatasetEmpty = () => {
+        const badNotePayloads = pm.environment.get('badNotePayloads');
+        if(badNotePayloads && badNotePayloads.length > 0) {
+            postman.setNextRequest('Adding Notes with Bad Note Payload');
+        }
+    }
+    repeatRequestUntilDatasetEmpty();
+
+Kode tersebut berfungsi untuk memanggil ulang request 'Adding Notes with Bad Note Payload’ hingga badNotePayloads kosong. Namun perlu diketahui bahwa postman.setNextRequest hanya bekerja bila Anda menjalankan request melalui Postman collection. Request tidak akan dijalankan berulang bila Anda menjalankannya secara manual menggunakan tombol Send.
+
+Simpan seluruh perubahan pada request Adding Notes with Bad Note Payload dan mari kita melangkah ke request selanjutnya.
+
+Buka request Update Note with Bad Note Payload, kemudian buka tab Pre-request Script, dan tuliskan kode yang sama seperti pada request Adding Notes with Bad Note Payload.
+
+    let badNotePayloads = pm.environment.get('badNotePayloads');  // ini akan bertipe Array
+
+    if (!badNotePayloads || badNotePayloads.length === 0) {
+        // inisialisasi dengan sejumlah note yang tidak sesuai
+        badNotePayloads = [
+            { tags: ["Android", "Web"], body: "Isi dari catatan A" },
+            { title: 1, tags: ["Android", "Web"], body: "Isi dari catatan A" },
+            { title: "Catatan A", body: "Isi dari catatan A" },
+            { title: "Catatan A", tags: [1, "2"], body: "Isi dari catatan A" },
+            { title: "Catatan A", tags: ["Android", "Web"] },
+            { title: "Catatan A", tags: ["Android", "Web"], body: true }
+        ]
+    }
+
+    const currentBadNotePayload = badNotePayloads.shift();  // hapus index 0, geser sisanya
+    pm.environment.set('currentBadNotePayload', JSON.stringify(currentBadNotePayload));
+    pm.environment.set('badNotePayloads', badNotePayloads);
+
+Lanjut, silakan buka tabs Body dan gunakan format data raw -> JSON, lalu isi nilai body dengan variabel {{currentBadNotePayload}}.
+
+2021051211310613c35f90d02b81b4fe02326e0694778f.jpeg
+
+Setelah itu, kita bisa mulai menulis kode testing-nya. Nah, karena spesifikasi testing-nya identik dengan request Adding Notes with Bad Note Payload, kali ini Anda bisa isikan kode yang sama pada kode testing request.
+
+    pm.test('response status code should have 400 value', () => {
+        pm.response.to.have.status(400);
+    });
+
+    pm.test('response Content-Type header should have application/json; charset=utf-8 value', () => {
+      pm.expect(pm.response.headers.get('Content-Type')).to.equals('application/json; charset=utf-8');
+    });
+
+    pm.test('response body should be an object', () => {
+        const responseJson = pm.response.json();
+        pm.expect(responseJson).to.be.an('object');
+    });
+
+    pm.test('response body object should have correct property and value', () => {
+        const responseJson = pm.response.json();
+        pm.expect(responseJson).to.haveOwnProperty('status');
+        pm.expect(responseJson.status).to.equals('fail');
+        pm.expect(responseJson).to.haveOwnProperty('message');
+        pm.expect(responseJson.message).to.be.ok;
+    });
+
+    const repeatRequestUntilDatasetEmpty = () => {
+        const badNotePayloads = pm.environment.get('badNotePayloads');
+
+        if(badNotePayloads && badNotePayloads.length > 0) {
+            postman.setNextRequest('Adding Notes with Bad Note Payload');
+        }
+    }
+
+    repeatRequestUntilDatasetEmpty();
+
+Pastikan sudah mengubah nama request di dalam fungsi postman.setNextRequest menjadi ‘Update Note with Bad Note Payload’ seperti kode berikut ini.
+
+    const repeatRequestUntilDatasetEmpty = () => {
+        const badNotePayloads = pm.environment.get('badNotePayloads');
+
+        if(badNotePayloads && badNotePayloads.length > 0) {
+            postman.setNextRequest('Update Note with Bad Note Payload');
+        }
+    }
+
+Simpan seluruh perubahan pada request Update Notes with Bad Note Payload ya.
+
+Terakhir, kita atur urutan kedua request tersebut tepat setelah Adding Notes dan Update Note. Caranya, cukup tekan dan geser menggunakan kursor.
+
+20210512113106deaa1d47b1bdab7f8c477a232bb8694d.jpeg
+
+Selesai! Yuk kita coba jalankan seluruh request menggunakan tombol Run pada Notes API Test Collection dan lihat hasil pengujiannya.
+
+    Catatan: Pastikan Notes API server sedang beroperasi ya.
+
+202105121131209b9dfec9a358d694f5b1422becfd57f1.jpeg
+
+Waduh! Ternyata banyak sekali pengujian yang gagal. Santai, ini normal kok. Kita akan membuat pengujian ini lolos dengan menerapkan proses validasi data.
+
+==========================================================================================================================
+
+Menerapkan Data Validation pada Notes API - Membuat Notes Schema dan Validator
+
+Sekarang saatnya kita memperbaiki pengujian dengan menerapkan proses validasi data. Kita tinggalkan dulu Postman dan buka kembali VSCode.
+
+Seperti yang sudah Anda ketahui, kita akan menggunakan bantuan Joi dalam proses validasi data. Jadi, langkah pertama yang perlu kita lakukan adalah memasang paket Joi pada proyek Notes API.
+
+Buka Terminal proyek dan tuliskan kode:
+
+    npm install joi
+
+Setelah Joi terpasang, buat folder baru di dalam src dengan nama validator.
+
+202105121153272723b94aab4440083b6caba51d13b7d1.jpeg
+
+Di dalam folder validator ini kita akan menyimpan seluruh berkas yang berhubungan dengan validasi data menggunakan Joi, seperti membuat schema dan fungsi dalam memvalidasi data atau payload itu sendiri.
+
+Agar lebih terorganisir lagi, kita buat folder baru dengan nama notes di dalam src -> validator.
+
+20210512115327db93e9a1ba967ca3143ce240bc56c61e.jpeg
+
+Kemudian di dalam folder src -> validator -> notes, buat dua berkas dengan nama index.js dan schema.js.
+
+202105121153262ad93eb580dcfd8d4b50f6866dd5cfc5.jpeg
+
+Berkas schema.js akan digunakan untuk fokus membuat dan menuliskan objek schema data notes. Sedangkan berkas index.js akan fokus dalam membuat fungsi sebagai validator yang menggunakan schema dari schema.js. Cukup paham?
+
+Oke, mari kita mulai dari membuat schema. Pada berkas schema.js, Anda bisa membuat objek schema dengan nama NotePayloadSchema. Kemudian, tetapkan spesifikasi schema seperti yang sudah Anda ketahui pada materi menyiapkan skenario pengujian.
+
+    const Joi = require('joi');
+
+    const NotePayloadSchema = Joi.object({
+      title: Joi.string().required(),
+      body: Joi.string().required(),
+      tags: Joi.array().items(Joi.string()).required(),
+    });
+
+Terakhir, silakan ekspor nilai NotePayloadSchema agar dapat digunakan pada berkas JavaScript lain.
+
+    const Joi = require('joi');
+
+    const NotePayloadSchema = Joi.object({
+      title: Joi.string().required(),
+      body: Joi.string().required(),
+      tags: Joi.array().items(Joi.string()).required(),
+    });
+
+    module.exports = { NotePayloadSchema };
+
+Kita gunakan destructuring object untuk mengantisipasi pembuatan lebih dari satu nilai Schema yang di ekspor pada berkas ini ke depannya.
+
+Yuk lanjut kita buat fungsi validasinya di berkas index.js.
+
+Silakan buka index.js dan buat objek dengan nama NotesValidator. Kemudian, buat properti validateNotePayload dan berikan nilainya dengan fungsi kosong yang memiliki satu parameter payload seperti ini:
+
+    const NotesValidator = {
+      validateNotePayload: (payload) => {
+
+      },
+    };
+
+Fungsi validateNotePayload ini nantinya akan berguna untuk melakukan validasi dan mengevaluasi apakah validasi itu berhasil atau tidak.
+
+Jadi, ayo tuliskan kode validasi Joi dalam memvalidasi payload di dalam fungsi ini. Manfaatkan schema dari NotePayloadSchema yang sudah kita buat sebelumnya.
+
+    const { NotePayloadSchema } = require('./schema');
+
+    const NotesValidator = {
+      validateNotePayload: (payload) => {
+        const validationResult = NotePayloadSchema.validate(payload);
+      },
+    };
+
+Lanjut, kita evaluasi validationResult. Jika properti error tidak undefined, maka kita bangkitkan error dengan membawa pesan dari properti validationResult.error.message.
+
+Terakhir, kita ekspor objek NotesValidator agar dapat kita gunakan nanti pada berkas JavaScript lain.
+
+    const { NotePayloadSchema } = require('./schema');
+
+    const NotesValidator = {
+      validateNotePayload: (payload) => {
+        const validationResult = NotePayloadSchema.validate(payload);
+        if (validationResult.error) {
+          throw new Error(validationResult.error.message);
+        }
+      },
+    };
+
+    module.exports = NotesValidator;
+
+Pembuatan schema dan validator sudah selesai. Simpan seluruh perubahan baik pada berkas index.js ataupun schema.js. Selanjutnya, kita akan coba gunakan validator ini pada plugin notes.
+
+==========================================================================================================================
+
+Menerapkan Data Validation pada Notes API - Menggunakan NoteValidator pada Plugin Note
+
+Setelah pembuatan objek NoteValidator selesai, saatnya kita gunakan validator pada plugin notes.
+
+Sama seperti NotesService, untuk mengirimkan data pada plugin, kita akan manfaatkan objek options. Oleh karena itu, yuk kita tambahkan nilai options plugin notes untuk validator di server.js.
+
+Buka berkas src -> server.js, kemudian impor NotesValidator dari berkas src -> validator -> notes -> index.js.
+
+    const Hapi = require('@hapi/hapi');
+    const notes = require('./api/notes');
+    const NotesService = require('./services/inMemory/NotesService');
+    const NotesValidator = require('./validator/notes');
+
+    /** kode disembunyikan */
+
+Selanjutnya pada proses registrasi plugin notes--lebih tepatnya pada objek options--kita tambahkan properti validator dan beri nilai NotesValidator.
+
+    /** kode disembunyikan */
+
+    const init = async () => {
+      const notesService = new NotesService();
+      const server = Hapi.server({
+        port: 5000,
+        host: process.env.NODE_ENV !== 'production' ? 'localhost' : '0.0.0.0',
+        routes: {
+          cors: {
+            origin: ['*'],
+          },
+        },
+      });
+
+      await server.register({
+        plugin: notes,
+        options: {
+          service: notesService,
+          validator: NotesValidator,
+        },
+      });
+
+      await server.start();
+      console.log(`Server berjalan pada ${server.info.uri}`);
+    };
+
+    init();
+
+Simpan perubahan pada berkas server.js. Sekarang, mari kita beralih ke plugin notes.
+
+Buka berkas src -> api -> notes -> index.js, lalu tambahkan properti validator pada parameter options di fungsi register dan gunakan validator sebagai argumen dalam membuat instances NoteHandler bersama dengan service.
+
+    const NotesHandler = require('./handler');
+    const routes = require('./routes');
+
+    module.exports = {
+      name: 'notes',
+      version: '1.0.0',
+      register: async (server, { service, validator }) => {
+        const notesHandler = new NotesHandler(service, validator);
+        server.route(routes(notesHandler));
+      },
+    };
+
+Sekarang, buka berkas handler di src -> api -> notes -> handler.js dan tambahkan validator di parameter constructor serta inisialisasi nilainya sebagai properti this.\_validator.
+
+    class NotesHandler {
+      constructor(service, validator) {
+        this._service = service;
+        this._validator = validator;
+
+        this.postNoteHandler = this.postNoteHandler.bind(this);
+        this.getNotesHandler = this.getNotesHandler.bind(this);
+        this.getNoteByIdHandler = this.getNoteByIdHandler.bind(this);
+        this.putNoteByIdHandler = this.putNoteByIdHandler.bind(this);
+        this.deleteNoteByIdHandler = this.deleteNoteByIdHandler.bind(this);
+      }
+
+      /** kode disembunyikan */
+    }
+    module.exports = NotesHandler;
+
+Dengan demikian, sekarang kita bisa mengakses fungsi validateNotePayload melalui this.\_validator.
+
+Kalau begitu, yuk langsung saja kita gunakan validateNotePayload di dalam postNoteHandler dan putNoteByIdHandler. Mengapa? Ini karena pada kedua fungsi tersebut kita mendapatkan data dari pengguna dalam bentuk payload.
+
+Oke, silakan panggil this.\_validator.validateNotePayload dan berikan parameter dengan nilai request.payload untuk memvalidasi payload yang diberikan pengguna.
+
+    class NotesHandler {
+      /** kode disembunyikan */
+
+      postNoteHandler(request, h) {
+        try {
+          this._validator.validateNotePayload(request.payload);
+          const { title = 'untitled', body, tags } = request.payload;
+
+          const noteId = this._service.addNote({ title, body, tags });
+
+          const response = h.response({
+            status: 'success',
+            message: 'Catatan berhasil ditambahkan',
+            data: {
+              noteId,
+            },
+          });
+          response.code(201);
+          return response;
+        } catch (error) {
+          const response = h.response({
+            status: 'fail',
+            message: error.message,
+          });
+          response.code(400);
+          return response;
+        }
+      }
+
+     /** kode disembunyikan */
+
+      putNoteByIdHandler(request, h) {
+        try {
+          this._validator.validateNotePayload(request.payload);
+          const { id } = request.params;
+
+          this._service.editNoteById(id, request.payload);
+
+          return {
+            status: 'success',
+            message: 'Catatan berhasil diperbarui',
+          };
+        } catch (error) {
+          const response = h.response({
+            status: 'fail',
+            message: error.message,
+          });
+          response.code(404);
+          return response;
+        }
+      }
+
+      /** kode disembunyikan */
+    }
+
+    module.exports = NotesHandler;
+
+Lihat kode yang ditebalkan ya. Pastikan Anda memanggilnya sebelum mengonsumsi nilai dari request.payload itu sendiri. Bila salah peletakan, bisa-bisa data yang buruk tetap diproses. Apalagi bila Anda memanggil setelah aksi menyimpan atau mengubah note.
+
+Setelah memanggil fungsi validasi di postNoteHandler dan putNoteByIdHandler, seharusnya proses validasi data berhasil diterapkan.
+
+Silakan simpan perubahan pada berkas handler.js dan coba uji ulang API menggunakan Postman.
+
+202105121328316a10730f6d92a0c22672776b381638fe.jpeg
+
+Ah, ternyata masih ada pengujian yang gagal. Bila Anda lihat, pengujian yang gagal hanya di request “Update Note with Bad Note Payload”. Mengapa bisa demikian? Coba kita lihat pesan gagalnya.
+
+response status code should have 400 value | AssertionError: expected response to have status code 400 but got 404
+
+Ternyata error disebabkan oleh status code yang bukan bernilai 400, malah 404. Tentu ini tidak sama dengan ekspektasi kita. Seharusnya, bila terjadi validation error response code-nya 400 bukan 404.
+
+Oke, sekarang kita lihat apa yang menyebabkan response mengembalikan status code 404 pada fungsi putNoteByIdHandler.
+
+    putNoteByIdHandler(request, h) {
+      try {
+        this._validator.validateNotePayload(request.payload);
+        const { id } = request.params;
+
+        this._service.editNoteById(id, request.payload);
+
+        return {
+          status: 'success',
+          message: 'Catatan berhasil diperbarui',
+        };
+      } catch (error) {
+        const response = h.response({
+          status: 'fail',
+          message: error.message,
+        });
+        response.code(404);
+        return response;
+      }
+    }
+
+Terjawab sudah! Ternyata ada bagian block catch. Kita menetapkan status code 404 karena kita berasumsi bahwa setiap eror yang terjadi pada proses memperbarui catatan adalah eror karena tidak ditemukannya resource.
+
+Lantas bagaimana solusinya? Apakah kita ganti saja 404 dengan 400? Hmm, mungkin itu membuat pengujian lolos, tetapi bukan merupakan solusi yang tepat. Bagaimana dengan nasib ketika terjadi eror karena resource tidak ditemukan? Tentu status code 400 tidaklah relevan.
+
+Tak usah bingung. Inilah saatnya kita gunakan teknik custom error agar dapat memberikan keterangan eror secara spesifik.
 
 ==========================================================================================================================
 
