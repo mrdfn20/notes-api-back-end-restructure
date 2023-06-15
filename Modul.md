@@ -2965,7 +2965,7 @@ Pembuatan schema dan validator sudah selesai. Simpan seluruh perubahan baik pada
 
 ==========================================================================================================================
 
-Menerapkan Data Validation pada Notes API - Menggunakan NoteValidator pada Plugin Note
+**Menerapkan Data Validation pada Notes API - Menggunakan NoteValidator pada Plugin Note**
 
 Setelah pembuatan objek NoteValidator selesai, saatnya kita gunakan validator pada plugin notes.
 
@@ -3152,7 +3152,381 @@ Tak usah bingung. Inilah saatnya kita gunakan teknik custom error agar dapat mem
 
 ==========================================================================================================================
 
+Menerapkan Custom Exceptions - Mengenal Jenis Kesalahan Yang Terjadi di Transaksi HTTP
+
+Seperti yang sudah Anda ketahui, tidak semua request HTTP yang masuk ke server dapat ditangani dengan baik. Aplikasi server dianjurkan untuk menolak permintaan server bila terdapat sesuatu yang salah dengan permintaan client. Namun, aplikasi server tidak boleh secara mentah-mentah menolak permintaan tersebut tanpa memberikan alasan yang jelas mengapa permintaan client tidak dapat diproses.
+
+202105240802006754aaf509acc36d2d1592b9f369f6f1.png
+
+Tahukah Anda bahwa kesalahan dapat terjadi karena dua pihak, yang pertama disebabkan oleh pihak client dan yang kedua oleh pihak server.
+
+Kesalahan oleh client dapat terjadi karena permintaan yang diajukan tidak ada, bukan haknya, tidak memenuhi spesifikasi, atau kesalahan-kesalahan lain yang timbul karena perbuatan client. Etika dalam merespons kesalahan yang disebabkan oleh client adalah dengan menetapkan status code 400 (bad request). Namun untuk kesalahan seperti not found, unauthorized, atau forbidden memiliki status code yang lebih spesifik.
+
+    400 (Bad Request) : Permintaan client gagal dijalankan karena proses validasi input dari client gagal.
+    401 (Unauthorized) : Permintaan client gagal dijalankan. Biasanya ini disebabkan karena pengguna belum melakukan proses autentikasi.
+    403 (Forbidden) : Permintaan client gagal dijalankan karena ia tidak memiliki hak akses ke resource yang diminta.
+    404 (Not Found) : Permintaan client gagal dijalankan karena resource yang diminta tidak ditemukan.
+
+Lalu, bagaimana dengan kesalahan yang disebabkan oleh server? Nah, ini adalah kesalahan yang datangnya bukan dari client. Kesalahan ini bisa disebabkan oleh developer yang salah menuliskan program (sering terjadi di JavaScript), server atau database yang sedang down, dan kesalahan lainnya. Jika terjadi kesalahan server, maka respons yang dikembalikan harus memiliki variasi kode status bernilai 500 (Internal Server Error), seri status 500 lainnya (saat ini ada 500-511).
+
+Ketika permintaan client gagal, terutama bila kesalahan tersebut terjadi karena client, kita harus mengembalikan status code yang sesuai dengan kesalahan yang terjadi. Penggunaan response code yang tepat dapat menghindari kebingungan client/user dalam memanfaatkan API.
+
 ==========================================================================================================================
+
+Menerapkan Custom Exceptions - Membuat Custom Error
+
+Pada materi sebelumnya, Anda sudah mengetahui macam-macam error yang terjadi pada HTTP transaction serta pentingnya memberikan response error yang sesuai, kini kita akan coba menerapkan praktik yang baik dalam menangani sebuah eror pada Notes API.
+
+Saat ini, ketika kita membangkitkan eror, entah itu disebabkan oleh tidak ditemukannya resource atau proses validasi data gagal, kita selalu menggunakan class Error secara generic. Hal ini menyulitkan kita untuk membedakan apa yang menyebabkan eror tersebut dibangkitkan.
+
+Agar dapat mudah mengidentifikasi eror secara lebih spesifik, maka kita perlu menerapkan teknik custom error. Berdasarkan kebutuhan Notes API saat ini, kita perlu membuat 3 (tiga) custom error, yakni:
+
+    ClientError (extends dari Error) : Custom error yang mengindikasikan eror karena masalah yang terjadi pada client. ClientError ini bersifat abstrak karena client error bisa lebih spesifik. Sehingga, sebaiknya Anda tidak membangkitkan error dengan menggunakan class ini secara langsung, tetapi gunakanlah turunannya.
+    NotFoundError (extends dari ClientError) : Custom error yang mengindikasikan eror karena resource yang diminta client tidak ditemukan.
+    InvariantError (extends dari ClientError) : Custom error yang mengindikasikan eror karena kesalahan bisnis logic pada data yang dikirimkan oleh client. Kesalahan validasi data merupakan salah satu InvariantError.
+
+Yuk sekarang kita langsung saja buat ketiga custom error di atas.
+
+Buat folder baru bernama exceptions di dalam src. Kemudian di dalam berkas tersebut, buat tiga berkas JavaScript dengan nama ClientError.js, NotFoundError.js, dan InvariantError.js.
+
+202105121431055bcc0d54d23047857a6bb399c0097884.jpeg
+
+Kita mulai dari ClientError.js. Silakan buat class ClientError yang mewarisi Error dan buat constructor yang menerima dua parameter message dan code. Untuk parameter code, beri nilai default 400.
+
+    class ClientError extends Error {
+      constructor(message, statusCode = 400) {
+
+      }
+    }
+
+Di dalam constructor, panggil fungsi super dengan membawa nilai message; inisialisasi nilai code pada this.statusCode; tetapkan this.name dengan nilai “ClientError”; dan ekspor ClientError agar dapat digunakan oleh berkas lain.
+
+    class ClientError extends Error {
+      constructor(message, statusCode = 400) {
+        super(message);
+        this.statusCode = statusCode;
+        this.name = 'ClientError';
+      }
+    }
+
+    module.exports = ClientError;
+
+Lanjut ke berkas InvariantError.js. Buat class dengan nama InvariantError yang mewarisi class ClientError dan buat constructor yang menerima satu parameter bernama message.
+
+    const ClientError = require('./ClientError');
+
+    class InvariantError extends ClientError {
+      constructor(message) {
+
+      }
+    }
+
+Di dalam constructor, panggil fungsi super dengan membawa nilai message dan tetapkan this.name dengan nilai “InvariantError”.
+
+    const ClientError = require('./ClientError');
+
+    class InvariantError extends ClientError {
+      constructor(message) {
+        super(message);
+        this.name = 'InvariantError';
+      }
+    }
+
+Karena InvariantError memiliki status code 400, maka kita tidak perlu menetapkan status code di sini. Sebab secara default, turunan ClientError akan memiliki nilai status code 400.
+
+Jangan lupa ekspor class InvariantError agar bisa digunakan pada berkas lain.
+
+    const ClientError = require('./ClientError');
+
+    class InvariantError extends ClientError {
+      constructor(message) {
+        super(message);
+        this.name = 'InvariantError';
+      }
+    }
+
+    module.exports = InvariantError;
+
+Yuk kita lanjut ke custom error terakhir.
+
+Silakan buka berkas NotFoundError.js dan buat class NotFoundError yang mewarisi ClientError dan buat constructor yang menerima parameter bernama message.
+
+    const ClientError = require('./ClientError');
+
+    class NotFoundError extends ClientError {
+      constructor(message) {
+
+      }
+    }
+
+Di dalamnya, panggil fungsi super dengan membawa nilai message dan 404 sebagai statusCode; tetapkan this.name dengan nilai “NotFoundError”; dan jangan lupa ekspor class NotFoundError.
+
+    const ClientError = require('./ClientError');
+
+    class NotFoundError extends ClientError {
+      constructor(message) {
+        super(message, 404);
+        this.name = 'NotFoundError';
+      }
+    }
+
+    module.exports = NotFoundError;
+
+Simpan seluruh perubahan, baik pada ClientError.js, InvariantError.js, ataupun NotFoundError.js.
+
+Oke, sekarang kita bisa ubah kode untuk membangkitkan eror dengan menggunakan custom error ini.
+
+Kita ubah dulu penerapan eror pada berkas src -> services -> inMemory -> NotesService.js. Pertama-tama pada fungsi addNote, temukan baris kode berikut:
+
+    throw new Error('Catatan gagal ditambahkan');
+
+Lalu ubah menjadi seperti ini:
+
+    throw new InvariantError('Catatan gagal ditambahkan');
+
+Lanjut, pada fungsi getNoteById, temukan baris kode berikut:
+
+    throw new Error('Catatan tidak ditemukan');
+
+Ubahlah menjadi seperti ini:
+
+    throw new NotFoundError('Catatan tidak ditemukan');
+
+Kemudian pada fungsi editNoteById, temukan baris kode berikut:
+
+    throw new Error('Gagal memperbarui catatan. Id tidak ditemukan');
+
+Lalu ubah menjadi seperti ini:
+
+    throw new NotFoundError('Gagal memperbarui catatan. Id tidak ditemukan');
+
+Terakhir pada fungsi deleteNoteById, temukan baris kode berikut:
+
+    throw new Error('Catatan gagal dihapus. Id tidak ditemukan');
+
+Ubahlah menjadi seperti ini:
+
+    throw new NotFoundError('Catatan gagal dihapus. Id tidak ditemukan');
+
+Jangan lupa untuk impor InvariantError dan NotFoundError pada NotesServices.js.
+
+    const { nanoid } = require('nanoid');
+    const InvariantError = require('../../exceptions/InvariantError');
+    const NotFoundError = require('../../exceptions/NotFoundError');
+
+    /** kode disembunyikan */
+
+Lanjut ya!
+
+Buka berkas src -> validator -> notes -> index.js, di dalam fungsi validateNotePayload, temukan baris kode berikut:
+
+    throw new Error(validationResult.error.message);
+
+Lalu ubahlah menjadi seperti ini:
+
+    throw new InvariantError(validationResult.error.message);
+
+Jangan lupa impor InvariantError pada index.js ya.
+
+    const InvariantError = require('../../exceptions/InvariantError');
+    const { NotePayloadSchema } = require('./schema');
+
+    /** kode disembunyikan */
+
+Paling akhir! Setelah selesai mengimplementasikan custom error, Sekarang saatnya kita ubah cara dalam menangani error yang dibangkitkan pada NotesHandler. Silakan buka berkas src -> api -> notes -> handler.js, lalu ubah seluruh penanganan error menjadi kode yang diberi tanda tebal.
+
+    const ClientError = require('../../exceptions/ClientError');
+
+    class NotesHandler {
+      constructor(service, validator) {
+        this._service = service;
+        this._validator = validator;
+
+        this.postNoteHandler = this.postNoteHandler.bind(this);
+        this.getNotesHandler = this.getNotesHandler.bind(this);
+        this.getNoteByIdHandler = this.getNoteByIdHandler.bind(this);
+        this.putNoteByIdHandler = this.putNoteByIdHandler.bind(this);
+        this.deleteNoteByIdHandler = this.deleteNoteByIdHandler.bind(this);
+      }
+
+      postNoteHandler(request, h) {
+        try {
+          this._validator.validateNotePayload(request.payload);
+          const { title = 'untitled', body, tags } = request.payload;
+
+          const noteId = this._service.addNote({ title, body, tags });
+
+          const response = h.response({
+            status: 'success',
+            message: 'Catatan berhasil ditambahkan',
+            data: {
+              noteId,
+            },
+          });
+          response.code(201);
+          return response;
+        } catch (error) {
+          if (error instanceof ClientError) {
+            const response = h.response({
+              status: 'fail',
+              message: error.message,
+            });
+            response.code(error.statusCode);
+            return response;
+          }
+
+          // Server ERROR!
+          const response = h.response({
+            status: 'error',
+            message: 'Maaf, terjadi kegagalan pada server kami.',
+          });
+          response.code(500);
+          console.error(error);
+          return response;
+        }
+      }
+
+      getNotesHandler() {
+        const notes = this._service.getNotes();
+        return {
+          status: 'success',
+          data: {
+            notes,
+          },
+        };
+      }
+
+      getNoteByIdHandler(request, h) {
+        try {
+          const { id } = request.params;
+          const note = this._service.getNoteById(id);
+          return {
+            status: 'success',
+            data: {
+              note,
+            },
+          };
+        } catch (error) {
+          if (error instanceof ClientError) {
+            const response = h.response({
+              status: 'fail',
+              message: error.message,
+            });
+            response.code(error.statusCode);
+            return response;
+          }
+
+          // Server ERROR!
+          const response = h.response({
+            status: 'error',
+            message: 'Maaf, terjadi kegagalan pada server kami.',
+          });
+          response.code(500);
+          console.error(error);
+          return response;
+        }
+      }
+
+      putNoteByIdHandler(request, h) {
+        try {
+          this._validator.validateNotePayload(request.payload);
+          const { id } = request.params;
+
+          this._service.editNoteById(id, request.payload);
+
+          return {
+            status: 'success',
+            message: 'Catatan berhasil diperbarui',
+          };
+        } catch (error) {
+          if (error instanceof ClientError) {
+            const response = h.response({
+              status: 'fail',
+              message: error.message,
+            });
+            response.code(error.statusCode);
+            return response;
+          }
+
+          // Server ERROR!
+          const response = h.response({
+            status: 'error',
+            message: 'Maaf, terjadi kegagalan pada server kami.',
+          });
+          response.code(500);
+          console.error(error);
+          return response;
+        }
+      }
+
+      deleteNoteByIdHandler(request, h) {
+        try {
+          const { id } = request.params;
+          this._service.deleteNoteById(id);
+
+          return {
+            status: 'success',
+            message: 'Catatan berhasil dihapus',
+          };
+        } catch (error) {
+          if (error instanceof ClientError) {
+            const response = h.response({
+              status: 'fail',
+              message: error.message,
+            });
+            response.code(error.statusCode);
+            return response;
+          }
+
+          // Server ERROR!
+          const response = h.response({
+            status: 'error',
+            message: 'Maaf, terjadi kegagalan pada server kami.',
+          });
+          response.code(500);
+          console.error(error);
+          return response;
+        }
+      }
+    }
+
+    module.exports = NotesHandler;
+
+Simak kode yang ditebalkan ya. Pada error handling kali ini, lebih tepatnya pada block catch, terdapat proses evaluasi objek error yang dihasilkan.
+
+Bila error merupakan turunan dari ClientError, maka kita bisa memberikan detail informasi terkait error apa yang terjadi kepada client melalui properti error.message dan error.statusCode.
+
+Namun bila bukan ClientError--itu berarti server error--maka secara default kita bisa merespons dengan pesan, “Maaf, terjadi kegagalan pada server kami” dan 500 sebagai nilai status codenya. Mungkin Anda akan mengerutkan dahi dan berkata, “Loh, mengapa pesannya tidak ambil dari error.message saja? Kan itu lebih menjelaskan errornya kepada client?”
+
+Benar sih pesannya akan lebih detail, tetapi pesan tersebut tidak akan berguna untuk client dan malah menimbulkan bahaya bila dalam pesan error tersebut mengandung informasi yang sensitif. Pesan yang dihasilkan server error bukan ditujukan untuk client, melainkan untuk kita sebagai developer. Tujuannya, agar kita dapat mengetahui penyebab terjadinya server error dan penanganannya menjadi lebih cepat.
+
+Maka dari itu, pada server error, kita bisa log error tersebut menggunakan console.error() sebelum mengembalikan response agar error yang terjadi bisa kita lihat pada Terminal proyek.
+
+Mari kita lanjutkan. Dengan mengubah cara penanganan error pada fungsi handler, seharusnya Notes API saat ini sudah mampu mengembalikan response error sesuai dengan kasus yang terjadi.
+
+Silakan simpan perubahan pada berkas handler.js dan coba uji kembali Notes API menggunakan Postman.
+
+202105121431065dd43e7175281925800e9bff7bfe7643.jpeg
+
+Mantap! Sekarang sudah tidak ada lagi pengujian yang gagal. Selamat ya!
+
+Penting!
+
+Bagi Anda yang menggunakan version control Git di proyek ini. Jangan lupa untuk melakukan commit terhadap perubahan yang terjadi. Caranya, tuliskan perintah berikut di Terminal proyek.
+
+    git add .
+
+Kemudian commit perubahannya dengan pesan “data validation implemented”.
+
+    git commit -m "data validation implemented"
+
+Terakhir, Anda bisa push perubahannya ke remote repository menggunakan perintah:
+
+    git push origin master
+
+
+    Catatan:
+    Source code dari latihan ini bisa Anda lihat pada repository: data-validation.
 
 ==========================================================================================================================
 
