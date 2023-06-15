@@ -2519,6 +2519,42 @@ Terakhir, Anda bisa push perubahannya ke remote repository menggunakan perintah 
 
 ==========================================================================================================================
 
+Data Validation
+
+Tahukah Anda bahwa salah satu tanggung jawab aplikasi Back-End adalah mengelola data. Data yang dikelola pun bisa bersumber dari mana saja, salah satunya dari client atau pengguna. Pengguna bisa mengirim apa pun ke sistem Anda selama aplikasi memberikan akses tersebut.
+
+Namun, jika tidak ingin resource Anda dipenuhi oleh data “sampah” atau tak berkualitas, tindakan apa yang bisa Anda ambil sebagai back-end developer?
+
+Jawabannya adalah validasi data. Validasi data menjadi salah satu hal yang krusial dalam pengembangan Back-End. Selain untuk memastikan pengguna mengirimkan data yang sesuai, validasi data juga bisa meminimalkan kemungkinan kejahatan yang dilakukan oleh pengguna seperti SQL Injection. Dengan adanya validasi data, kita bisa memastikan data yang dikirim tidak mengandung unsur yang berbahaya atau dapat mengganggu sistem.
+
+“Never trust your user” adalah kata yang perlu kita ingat ketika mengembangkan aplikasi Back-End. Jangan pernah percaya informasi apa pun yang pengguna berikan, bahkan aplikasi Front-End Anda sekalipun yang telah menerapkan proses validasi. Hal ini karena kita tidak tahu bagaimana pengguna nakal dapat memanipulasi aplikasi front-end untuk mengirimkan data yang buruk.
+
+Mari kita ambil contoh pada sistem yang dapat melakukan transfer saldo tabungan di bank.
+
+202105240800387c9d056c8dce53b64f834f485ef0efd7.png
+
+Perhatikan data yang terdapat pada gambar di atas. Pengguna hanya memiliki saldo sebesar IDR. 1.000.000, tetapi ia mencoba untuk mentransfer sebesar IDR 1.500.000. Meskipun terdapat validasi di sisi aplikasi front-end menggunakan JavaScript, namun tahukah Anda bahwa user bisa saja menghilangkan validasi tersebut dengan mematikan JavaScript di browser.
+
+20210512110759dae491b22c80daf1ca4e79f3481ed227.jpeg
+
+Dalam kasus ini, logika validation tidak akan jalan dan akhirnya data berhasil dikirimkan ke back-end. Bila back-end sepenuhnya mengandalkan validasi di front-end, malapetaka pun terjadi.
+
+Mari kita lihat contoh lain yang lebih berhubungan dengan kita saat ini. Pada Notes API yang kita buat, kira-kira apa jadinya bila pengguna mengirimkan data title dengan nilai boolean, body dengan nilai number, dan tags dengan nilai string?
+
+20210512110800be1cc01b7614aa18624c2bc2a49d232d.jpeg
+
+Karena tidak adanya proses validasi, Notes API akan menerima dan menyimpan data secara mentah-mentah. Tentu ini akan mengganggu keberlangsungan sistem Anda ke depannya.
+
+Lalu pertanyaanya, bagaimana cara melakukan validasi data? Tentu caranya bermacam-macam, tergantung kasus yang ingin Anda hadapi. Ada yang perlu memeriksa hingga level database, bahkan ada pula yang dapat ditangani dengan beberapa baris kode saja.
+
+Untuk kasus transfer saldo, Anda bisa melakukan pengecekan jumlah saldo di database sebelum melakukan proses transfer. Anda harus melakukan query pada jumlah saldo yang aktif, kemudian bandingkan dengan jumlah saldo yang akan dikirim. Jika sesuai, barulah proses transfer bisa dilakukan.
+
+Nah, untuk kasus yang kita hadapi di Notes API, sebenarnya proses validasi cukup dilakukan dengan memeriksa tipe dan nilai dari data yang dikirimkan client. Pastikan data yang dikirim itu masuk ke dalam spesifikasi yang sesuai. Untuk melakukannya, Anda bisa menggunakan if dan operator conditional.
+
+Namun, masalah baru tiba ketika Anda menggunakan if dan operator conditional untuk memvalidasi data yang banyak dan kompleks. Yaitu, mau sebanyak dan serumit apa kode yang Anda tuliskan hanya untuk sekadar memvalidasi data?
+
+Tak perlu khawatir, di JavaScript, kita bisa melakukan validasi data tersebut dengan bantuan paket Joi.
+
 ==========================================================================================================================
 
 ==========================================================================================================================
