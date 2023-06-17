@@ -3530,7 +3530,80 @@ Terakhir, Anda bisa push perubahannya ke remote repository menggunakan perintah:
 
 ==========================================================================================================================
 
+eploy Perubahan Hapi Plugin dan Data Validation
+
+Selamat ya! Sejauh ini Anda sudah berhasil melakukan restrukturisasi proyek dengan memanfaatkan Hapi plugin. Anda juga telah berhasil menerapkan proses data validation menggunakan Joi. Dengan begitu, kini proyek Notes API memiliki struktur yang mudah untuk dikembangkan dan aman untuk menerima data dari pengguna. Tak hanya itu, sekarang Notes API Anda sudah lebih siap untuk digunakan secara publik, yeay!
+
+Eh tapi jangan lupa ya, perubahan yang kita lakukan masih di lokal alias tahap development. Kita belum menerapkan perubahan di server production yang ada di Amazon Elastic Compute Cloud (Amazon EC2). Yuk, tanpa berlama-lama lagi kita perbarui saja server yang ada di EC2.
+
+Sebelum itu, pastikan Anda sudah commit seluruh perubahan yang ada di local repository dan push ke remote repository ya. Jika sudah, Anda bisa langsung mengakses EC2 instance.
+
+Silakan buka Terminal/PowerShell/CMD pada directory di mana Anda menyimpan key pairs (key.pem) untuk akses EC2 instance. Kemudian tuliskan kode berikut:
+
+    ssh -i "<key>.pem" <alamat instance EC2>
+
+    Ganti <key> dengan nama berkas .pem yang Anda punya, lalu ubah <alamat instance EC2> dengan public DNS dari EC2 instance Anda. Bila Anda belum mengetahui cara mengakses EC2, disarankan untuk lihat tutorial yang diberikan oleh AWS tentang Connect to your Linux instance using SSH.
+
+Setelah berhasil masuk ke EC2 instance, masuklah ke folder notes-app-back-end dengan perintah:
+
+    cd notes-app-back-end
+
+20210512162907471788b1b02c0f3185d0e0abbcbe6e7d.jpeg
+
+Kemudian, update proyek dari remote repository dengan menggunakan perintah:
+
+    git pull origin master
+
+202105121629087ab8139d9ac258b52da14abd683a0ca2.jpeg
+
+Selepas itu, instal beberapa package yang digunakan pada perubahan saat ini. Silakan tuliskan perintah:
+
+    npm install
+
+20210512162909df6e68804e976e685e89a2455c7af0fc.jpeg
+
+Kemudian, restart process manager untuk menjalankan ulang notes-api server. Gunakan perintah:
+
+    pm2 restart notes-api
+
+20210512162908f5cd45ea7be643ce07f8137bbf875234.jpeg
+
+Untuk memastikan server berjalan dengan baik, silakan lihat pm2 logs dengan cara menuliskan perintah:
+
+    pm2 logs
+
+20210512162908a96bfdb0d928d52c8c7e8830ba51c473.jpeg
+
+Pastikan logs yang ada di paling bawah tampak seperti itu ya. Jika sudah aman, itu menandakan bahwa proses deploy telah selesai. Yeah!
+
+    Catatan: Untuk keluar dari logs, gunakan kombinasi tombol CTRL + C
+
+Anda bisa coba akses Notes API dengan mengunjungi IP publik EC2 dan port 5000. Anda juga bisa mengujinya melalui Postman dan juga aplikasi Notes Apps.
+
+Cara menghubungkan Notes API dengan Notes Apps:
+
+    Silakan klik tombol Change URL.
+    2021030810464429e07f2c36082e9f83396e087587da00.png
+
+    Lalu, isi dengan host beserta port dari web server yang Anda buat. Contohnya “localhost:5000”
+    20210308104657da3785c63dc2ddcd9de3ec6a541b11bd.png
+    Setelah Anda melihat URL dari web server, maka web server dan aplikasi client sudah terhubung.2021030810470899d7824d86fee9ce6aca6a6adc3e8176.png
+
 ==========================================================================================================================
+
+Ikhtisar Hapi Plugin dan Data Validation
+
+Anda berada di akhir dari modul Hapi Plugin dan Data Validation. Mari kita uraikan apa saja kemampuan yang seharusnya sudah Anda miliki.
+
+    Mengetahui Hapi Plugin, cara membuat Hapi Plugin, serta menggunakannya pada Hapi Server.
+    Anda mampu restrukturisasi proyek Notes API dengan menggunakan teknik Plugin.
+    Mengetahui data validation dan pentingnya menerapkan proses validasi data.
+    Mengetahui Joi sebagai tools dalam memvalidasi data, mampu membuat Joi schema, dan memvalidasi data berdasarkan schema.
+    Anda mampu menerapkan proses validasi data pada proyek Notes API dengan bantuan Joi.
+    Anda mampu membuat custom error dalam membangkitkan dan menangani error yang spesifik.
+    Anda mampu memasang (deploy) perubahan yang terjadi di lokal ke EC2 instance.
+
+Dengan uraian tersebut, diharapkan Anda dapat memahami semua materi yang telah disampaikan. Jika belum, Anda bisa ulas kembali materi yang diberikan pada modul ini dan menanyakannya di forum diskusi. Untuk Anda yang sudah merasa mantap, yuk lanjut ke modul berikutnya!
 
 ==========================================================================================================================
 
